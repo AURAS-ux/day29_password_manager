@@ -1,8 +1,8 @@
 from tkinter import *
-import csv
 from tkinter import messagebox
 import random
 import pyperclip
+import json
 
 
 # ---------------------------- PASSWORD GENERATOR ------------------------------- #
@@ -36,37 +36,55 @@ def GeneratePassword():
 
 # ---------------------------- SAVE PASSWORD ------------------------------- #
 
-def SaveData(data):
+def SaveData():
+    website = websiteBox.get()
+    email = emailUsernameBox.get()
+    password = passwordBox.get()
+    new_dic = {
+        website: {
+            "email": email,
+            "password": password,
+        }
+    }
     if websiteBox.get() == "" or emailUsernameBox.get() == "" or passwordBox.get() == "":
         messagebox.showinfo(title="Error", message="Please fill all spaces")
     else:
-        answer = messagebox.askokcancel(title="Confirm", message=f"Are those the credentials you wanted to add "
-                                                                 f"\nEmail:{emailUsernameBox.get()}"
-                                                                 f"\nWebsite:{websiteBox.get()}"
-                                                                 f"\nPassword:{passwordBox.get()}")
-
-        if answer:
-            file = open("data.csv", "a", newline="")
-            writer = csv.writer(file)
-            writer.writerow(data)
-        else:
-            EmptyEntrys()
+        data = LoadJsonFile()
+        data.update(new_dic)
+        with open("data.json", "w") as file:
+            json.dump(data, file, indent=4)
 
 
-def GetData(website, email, password):
-    data = [website, email, password]
-    return data
+def LoadJsonFile():
+    try:
+        with open("data.json", "r") as file:
+            data = json.load(file)
+            return data
+    except json.decoder.JSONDecodeError:
+        with open("data.json", "w") as file:
+            json.dump({}, file, indent=4)
 
 
 def EmptyEntrys():
     websiteBox.delete(0, END)
     passwordBox.delete(0, END)
 
+def Find(site):
+    jsonData = LoadJsonFile()
+    for i in jsonData:
+        if i == site:
+            messagebox.showinfo(title="Your credentials",
+                                message=f"E-mail:{jsonData[i]['email']}\nPassword:{jsonData[i]['password']}")
+        else:
+            messagebox.showinfo(title="Error",message=f"No data entries for website:{site}")
+            break
+
 
 # ---------------------------- UI SETUP ------------------------------- #
 
 
 window = Tk()
+LoadJsonFile()
 window.title("Password Manager")
 window.config(pady=50, padx=50)
 window.resizable(False, False)
@@ -79,9 +97,12 @@ canvas.grid(row=0, column=1)
 
 websiteLabel = Label(text="Website:")
 websiteLabel.grid(row=1, column=0, sticky="e")
-websiteBox = Entry(width=35)
+websiteBox = Entry(width=32)
 websiteBox.grid(row=1, column=1, columnspan=2, sticky="w")
 websiteBox.focus()
+
+searchButton = Button(text="Search", relief="groove", height=1, width=12, command=lambda: [Find(websiteBox.get())])
+searchButton.grid(column=2, row=1)
 
 emailUsernameLabel = Label(text="Email/Username:")
 emailUsernameLabel.grid(row=2, column=0)
@@ -91,13 +112,14 @@ emailUsernameBox.insert(0, "auraspaltaneamarian@gmail.com")
 
 passwordLabel = Label(text="Password")
 passwordLabel.grid(row=3, column=0)
-passwordBox = Entry(width=21)
-passwordBox.grid(row=3, column=1, sticky="w")
-genPassword = Button(text="Generate Password", height=1, width=14, command=lambda: [GeneratePassword()])
+passwordBox = Entry(width=32)
+passwordBox.grid(row=3, column=1, sticky="w", columnspan=2)
+genPassword = Button(text="Generate Password", relief="groove", height=1, width=14,
+                     command=lambda: [GeneratePassword()])
 genPassword.grid(row=3, column=2, sticky="w")
 
-addButton = Button(text="Add", height=1, width=39,
-                   command=lambda: [SaveData(GetData(websiteBox.get(), emailUsernameBox.get(), passwordBox.get())),
+addButton = Button(text="Add", height=1, width=39, relief="groove",
+                   command=lambda: [SaveData(),
                                     EmptyEntrys()])
 addButton.grid(row=4, column=1, columnspan=2, sticky="w")
 
